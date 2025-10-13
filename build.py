@@ -39,6 +39,20 @@ def build_linux_x64(version):
     
     return run_command(cmd)
 
+def build_linux_arm64(version):
+    """构建Linux ARM64版本"""
+    print("开始构建Linux ARM64版本...")
+    
+    # 在GitHub Actions中，我们使用相同的构建命令，但重命名输出文件
+    cmd = f'pyinstaller --onefile --name "SocketChatApp-linux-arm64-{version}" ' \
+          f'--add-data "templates:templates" ' \
+          f'--hidden-import=queue ' \
+          f'--hidden-import=flask ' \
+          f'--hidden-import=webview ' \
+          f'main.py'
+    
+    return run_command(cmd)
+
 def build_windows_x64(version):
     """构建Windows x64版本"""
     print("开始构建Windows x64版本...")
@@ -73,7 +87,7 @@ def install_dependencies():
 def main():
     parser = argparse.ArgumentParser(description='多平台构建脚本')
     parser.add_argument('--version', required=True, help='版本号 (例如: v1.0.0)')
-    parser.add_argument('--platform', choices=['linux-x64', 'windows-x64', 'all'], 
+    parser.add_argument('--platform', choices=['linux-x64', 'linux-arm64', 'windows-x64', 'all'], 
                        default='all', help='构建平台')
     
     args = parser.parse_args()
@@ -91,6 +105,10 @@ def main():
     
     if args.platform in ['linux-x64', 'all']:
         if not build_linux_x64(args.version):
+            success = False
+    
+    if args.platform in ['linux-arm64', 'all']:
+        if not build_linux_arm64(args.version):
             success = False
     
     if args.platform in ['windows-x64', 'all']:
