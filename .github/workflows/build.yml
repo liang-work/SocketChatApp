@@ -170,6 +170,20 @@ jobs:
         unzip -q commandlinetools-linux-9477386_latest.zip -d $HOME/android-sdk/cmdline-tools/latest
         rm commandlinetools-linux-9477386_latest.zip
         
+        # 验证sdkmanager文件是否存在
+        if [ -f "$HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager" ]; then
+          echo "sdkmanager工具安装成功"
+          # 设置文件执行权限
+          chmod +x $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager
+        else
+          echo "sdkmanager工具未找到，检查目录结构"
+          # 列出目录内容以调试
+          ls -la $HOME/android-sdk/cmdline-tools/latest/
+          # 尝试查找sdkmanager文件
+          find $HOME/android-sdk -name "sdkmanager" -type f
+          exit 1
+        fi
+        
         # 设置环境变量
         echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
