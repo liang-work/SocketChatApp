@@ -156,28 +156,35 @@ jobs:
     
     - name: Set up Android SDK and tools
       run: |
-        # 安装Android SDK和必要的工具
+        # 安装必要的系统工具
         sudo apt-get update
         sudo apt-get install -y wget unzip
         
+        # 在用户目录下创建Android SDK目录（避免权限问题）
+        mkdir -p $HOME/android-sdk
+        
         # 下载并安装Android Command Line Tools
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-        mkdir -p /usr/local/android-sdk
-        unzip -q commandlinetools-linux-9477386_latest.zip -d /usr/local/android-sdk
-        rm commandlinetools-latest-linux.zip
+        unzip -q commandlinetools-linux-9477386_latest.zip -d $HOME/android-sdk
+        rm commandlinetools-linux-9477386_latest.zip
         
         # 设置环境变量
-        echo "ANDROID_HOME=/usr/local/android-sdk" >> $GITHUB_ENV
-        echo "PATH=$PATH:/usr/local/android-sdk/cmdline-tools/bin" >> $GITHUB_ENV
+        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+        echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/bin" >> $GITHUB_ENV
         
         # 接受Android SDK许可证
-        yes | /usr/local/android-sdk/cmdline-tools/bin/sdkmanager --licenses
+        yes | $HOME/android-sdk/cmdline-tools/bin/sdkmanager --licenses
         
         # 安装必要的Android SDK组件
-        /usr/local/android-sdk/cmdline-tools/bin/sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-33"
+        $HOME/android-sdk/cmdline-tools/bin/sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-33"
         
-        # 安装Aidl工具（包含在build-tools中）
-        /usr/local/android-sdk/cmdline-tools/bin/sdkmanager "build-tools;34.0.0"
+        # 验证Aidl工具是否安装成功
+        if [ -f "$HOME/android-sdk/build-tools/34.0.0/aidl" ]; then
+          echo "Aidl工具安装成功"
+        else
+          echo "Aidl工具未找到，尝试重新安装build-tools"
+          $HOME/android-sdk/cmdline-tools/bin/sdkmanager "build-tools;34.0.0"
+        fi
     
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
@@ -228,7 +235,7 @@ jobs:
     - name: Build Android APK
       run: |
         # 设置环境变量避免交互式提示
-        export ANDROID_HOME=/usr/local/android-sdk
+        export ANDROID_HOME=$HOME/android-sdk
         export PATH=$PATH:$ANDROID_HOME/cmdline-tools/bin:$ANDROID_HOME/platform-tools
         export BUILD_PATH=$PWD/.buildozer
         export CACHE_PATH=$HOME/.buildozer
