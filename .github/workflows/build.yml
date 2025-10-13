@@ -41,18 +41,15 @@ jobs:
   build-linux-x64:
     if: ${{ github.event.inputs.build_all || github.event.inputs.build_linux_x64 }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.11"
     
     - name: Install dependencies
       run: |
@@ -72,16 +69,13 @@ jobs:
     - name: Upload Linux x64 artifact
       uses: actions/upload-artifact@v4
       with:
-        name: linux-x64-${{ matrix.python-version }}
+        name: linux-x64-3.11
         path: dist/${PROJECT_NAME}-linux-x64-${VERSION}
         retention-days: 30
 
   build-linux-arm64:
     if: ${{ github.event.inputs.build_all || github.event.inputs.build_linux_arm64 }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
     
     steps:
     - name: Checkout code
@@ -90,10 +84,10 @@ jobs:
     - name: Set up QEMU for ARM64
       uses: docker/setup-qemu-action@v3
     
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.11"
     
     - name: Install dependencies
       run: |
@@ -113,25 +107,22 @@ jobs:
     - name: Upload Linux ARM64 artifact
       uses: actions/upload-artifact@v4
       with:
-        name: linux-arm64-${{ matrix.python-version }}
+        name: linux-arm64-3.11
         path: dist/${PROJECT_NAME}-linux-arm64-${VERSION}
         retention-days: 30
 
   build-windows-x64:
     if: ${{ github.event.inputs.build_all || github.event.inputs.build_windows_x64 }}
     runs-on: windows-latest
-    strategy:
-      matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.11"
     
     - name: Install dependencies
       run: |
@@ -151,7 +142,7 @@ jobs:
     - name: Upload Windows x64 artifact
       uses: actions/upload-artifact@v4
       with:
-        name: windows-x64-${{ matrix.python-version }}
+        name: windows-x64-3.11
         path: dist/${{ env.PROJECT_NAME }}-windows-x64-${{ env.VERSION }}.exe
         retention-days: 30
 
@@ -163,13 +154,35 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up Android SDK
-      uses: android-actions/setup-android@v3
+    - name: Set up Android SDK and tools
+      run: |
+        # 安装Android SDK和必要的工具
+        sudo apt-get update
+        sudo apt-get install -y wget unzip
+        
+        # 下载并安装Android Command Line Tools
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+        mkdir -p /usr/local/android-sdk
+        unzip -q commandlinetools-linux-9477386_latest.zip -d /usr/local/android-sdk
+        rm commandlinetools-latest-linux.zip
+        
+        # 设置环境变量
+        echo "ANDROID_HOME=/usr/local/android-sdk" >> $GITHUB_ENV
+        echo "PATH=$PATH:/usr/local/android-sdk/cmdline-tools/bin" >> $GITHUB_ENV
+        
+        # 接受Android SDK许可证
+        yes | /usr/local/android-sdk/cmdline-tools/bin/sdkmanager --licenses
+        
+        # 安装必要的Android SDK组件
+        /usr/local/android-sdk/cmdline-tools/bin/sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-33"
+        
+        # 安装Aidl工具（包含在build-tools中）
+        /usr/local/android-sdk/cmdline-tools/bin/sdkmanager "build-tools;34.0.0"
     
-    - name: Set up Python
+    - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: "3.11"
     
     - name: Install Python dependencies
       run: |
@@ -215,6 +228,8 @@ jobs:
     - name: Build Android APK
       run: |
         # 设置环境变量避免交互式提示
+        export ANDROID_HOME=/usr/local/android-sdk
+        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/bin:$ANDROID_HOME/platform-tools
         export BUILD_PATH=$PWD/.buildozer
         export CACHE_PATH=$HOME/.buildozer
         
@@ -259,9 +274,9 @@ jobs:
           Multi-platform build of $PROJECT_NAME
           
           Built artifacts include:
-          - Linux x64 executables
-          - Linux ARM64 executables  
-          - Windows x64 executables
+          - Linux x64 executable (Python 3.11)
+          - Linux ARM64 executable (Python 3.11)
+          - Windows x64 executable (Python 3.11)
           - Android APK
         draft: false
         prerelease: false
