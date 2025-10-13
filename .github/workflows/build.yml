@@ -170,11 +170,12 @@ jobs:
         unzip -q commandlinetools-linux-9477386_latest.zip -d $HOME/android-sdk/cmdline-tools/latest
         rm commandlinetools-linux-9477386_latest.zip
         
-        # 验证sdkmanager文件是否存在
-        if [ -f "$HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager" ]; then
+        # 验证sdkmanager文件是否存在（使用正确的路径）
+        SDKMANAGER_PATH="$HOME/android-sdk/cmdline-tools/latest/cmdline-tools/bin/sdkmanager"
+        if [ -f "$SDKMANAGER_PATH" ]; then
           echo "sdkmanager工具安装成功"
           # 设置文件执行权限
-          chmod +x $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager
+          chmod +x "$SDKMANAGER_PATH"
         else
           echo "sdkmanager工具未找到，检查目录结构"
           # 列出目录内容以调试
@@ -187,20 +188,20 @@ jobs:
         # 设置环境变量
         echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-        echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_ENV
+        echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/cmdline-tools/bin" >> $GITHUB_ENV
         
         # 接受Android SDK许可证
-        yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk --licenses
+        yes | "$SDKMANAGER_PATH" --sdk_root=$HOME/android-sdk --licenses
         
         # 安装必要的Android SDK组件
-        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk "platform-tools" "build-tools;34.0.0" "platforms;android-33"
+        "$SDKMANAGER_PATH" --sdk_root=$HOME/android-sdk "platform-tools" "build-tools;34.0.0" "platforms;android-33"
         
         # 验证Aidl工具是否安装成功
         if [ -f "$HOME/android-sdk/build-tools/34.0.0/aidl" ]; then
           echo "Aidl工具安装成功"
         else
           echo "Aidl工具未找到，尝试重新安装build-tools"
-          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk "build-tools;34.0.0"
+          "$SDKMANAGER_PATH" --sdk_root=$HOME/android-sdk "build-tools;34.0.0"
         fi
     
     - name: Set up Python 3.11
