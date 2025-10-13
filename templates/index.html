@@ -1,0 +1,594 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>局域网聊天工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            display: flex;
+            min-height: 600px;
+        }
+        
+        .control-panel {
+            width: 300px;
+            background: #f8f9fa;
+            padding: 25px;
+            border-right: 1px solid #e9ecef;
+        }
+        
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+        }
+        
+        .section-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #495057;
+            border-bottom: 2px solid #4facfe;
+            padding-bottom: 5px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #6c757d;
+        }
+        
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            max-height: 500px;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-left: 4px solid #4facfe;
+        }
+        
+        .message.system {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        
+        .message.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .message-header {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .message-content {
+            font-size: 14px;
+            color: #495057;
+            line-height: 1.4;
+        }
+        
+        .input-area {
+            padding: 20px;
+            background: white;
+        }
+        
+        .message-input {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .message-input input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .message-input input:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+        
+        .message-input button {
+            padding: 12px 25px;
+            background: #4facfe;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .message-input button:hover {
+            background: #3a9bf7;
+        }
+        
+        .message-input button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .connection-info {
+            background: #e7f3ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            color: #0066cc;
+        }
+        
+        .typing-indicator {
+            color: #6c757d;
+            font-style: italic;
+            font-size: 12px;
+            padding: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 安全局域网聊天工具</h1>
+            <p>基于Socket的实时通信 - 安全可靠</p>
+        </div>
+        
+        <div class="content">
+            <div class="control-panel">
+                <div class="section">
+                    <div class="section-title">服务器控制</div>
+                    <div class="input-group">
+                        <label for="serverPort">服务器端口:</label>
+                        <input type="number" id="serverPort" value="8080" min="1024" max="65535">
+                    </div>
+                    <button class="btn btn-primary" onclick="startServer()">启动服务器</button>
+                    <button class="btn btn-danger" onclick="stopServer()" disabled>停止服务器</button>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">客户端连接</div>
+                    <div class="input-group">
+                        <label for="clientHost">服务器地址:</label>
+                        <input type="text" id="clientHost" value="localhost" placeholder="例如: 192.168.1.100">
+                    </div>
+                    <div class="input-group">
+                        <label for="clientPort">服务器端口:</label>
+                        <input type="number" id="clientPort" value="8080" min="1024" max="65535">
+                    </div>
+                    <div class="input-group">
+                        <label for="username">用户名:</label>
+                        <input type="text" id="username" value="用户" placeholder="请输入用户名">
+                    </div>
+                    <button class="btn btn-success" onclick="connectClient()">连接服务器</button>
+                    <button class="btn btn-danger" onclick="disconnectClient()" disabled>断开连接</button>
+                </div>
+                
+                <div id="status" class="status status-info">
+                    请启动服务器或连接现有服务器
+                </div>
+            </div>
+            
+            <div class="chat-area">
+                <div class="messages" id="messages">
+                    <div class="connection-info">
+                        💡 提示: 先启动服务器，然后连接服务器开始聊天
+                    </div>
+                </div>
+                
+                <div class="input-area">
+                    <div class="message-input">
+                        <input type="text" id="messageInput" placeholder="输入消息..." disabled onkeypress="handleKeyPress(event)">
+                        <button onclick="sendMessage()" disabled>发送</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let serverRunning = false;
+        let clientConnected = false;
+        let lastMessageId = 0;
+        let messagePollInterval = null;
+        
+        function updateUI() {
+            document.getElementById('serverPort').disabled = serverRunning;
+            document.querySelector('.btn-primary').disabled = serverRunning;
+            document.querySelector('.btn-danger').disabled = !serverRunning;
+            
+            document.getElementById('clientHost').disabled = clientConnected;
+            document.getElementById('clientPort').disabled = clientConnected;
+            document.getElementById('username').disabled = clientConnected;
+            document.querySelector('.btn-success').disabled = clientConnected;
+            document.querySelector('.btn-danger').disabled = !clientConnected;
+            
+            document.getElementById('messageInput').disabled = !clientConnected;
+            document.querySelector('.message-input button').disabled = !clientConnected;
+        }
+        
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status status-${type}`;
+        }
+        
+        function addMessage(data) {
+            const messages = document.getElementById('messages');
+            
+            // 移除连接提示信息
+            const connectionInfo = messages.querySelector('.connection-info');
+            if (connectionInfo) {
+                connectionInfo.remove();
+            }
+            
+            const messageDiv = document.createElement('div');
+            
+            let messageClass = 'message';
+            if (data.type === 'system') messageClass += ' system';
+            if (data.type === 'error') messageClass += ' error';
+            
+            messageDiv.className = messageClass;
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    ${data.ip || '系统'} | ${data.timestamp || new Date().toLocaleString()}
+                </div>
+                <div class="message-content">${data.content}</div>
+            `;
+            
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+        
+        async function pollMessages() {
+            if (!clientConnected) {
+                clearInterval(messagePollInterval);
+                return;
+            }
+            
+            try {
+                const response = await fetch('/get_messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ last_id: lastMessageId })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.messages.length > 0) {
+                    result.messages.forEach(message => {
+                        addMessage(message);
+                        lastMessageId = Math.max(lastMessageId, message.id);
+                    });
+                }
+            } catch (error) {
+                console.error('获取消息失败:', error);
+            }
+        }
+        
+        function startMessagePolling() {
+            if (messagePollInterval) {
+                clearInterval(messagePollInterval);
+            }
+            messagePollInterval = setInterval(pollMessages, 500); // 每500毫秒轮询一次
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        async function startServer() {
+            const port = document.getElementById('serverPort').value;
+            
+            try {
+                const response = await fetch('/start_server', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ port: parseInt(port) })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    serverRunning = true;
+                    showStatus(result.message, 'success');
+                    addMessage({
+                        type: 'system',
+                        content: '服务器启动成功',
+                        timestamp: new Date().toLocaleString()
+                    });
+                } else {
+                    showStatus(result.message, 'error');
+                }
+                
+                updateUI();
+            } catch (error) {
+                showStatus('服务器启动失败: ' + error.message, 'error');
+            }
+        }
+        
+        async function stopServer() {
+            try {
+                const response = await fetch('/stop_server', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    serverRunning = false;
+                    clientConnected = false;
+                    showStatus(result.message, 'success');
+                    addMessage({
+                        type: 'system',
+                        content: '服务器已停止',
+                        timestamp: new Date().toLocaleString()
+                    });
+                    clearInterval(messagePollInterval);
+                } else {
+                    showStatus(result.message, 'error');
+                }
+                
+                updateUI();
+            } catch (error) {
+                showStatus('服务器停止失败: ' + error.message, 'error');
+            }
+        }
+        
+        async function connectClient() {
+            const host = document.getElementById('clientHost').value;
+            const port = document.getElementById('clientPort').value;
+            const username = document.getElementById('username').value;
+            
+            if (!username.trim()) {
+                showStatus('请输入用户名', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/connect_client', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        host: host,
+                        port: parseInt(port),
+                        username: username
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    clientConnected = true;
+                    showStatus(result.message, 'success');
+                    addMessage({
+                        type: 'system',
+                        content: `已连接到服务器 ${host}:${port}`,
+                        timestamp: new Date().toLocaleString()
+                    });
+                    
+                    // 开始轮询消息
+                    startMessagePolling();
+                } else {
+                    showStatus(result.message, 'error');
+                }
+                
+                updateUI();
+            } catch (error) {
+                showStatus('连接服务器失败: ' + error.message, 'error');
+            }
+        }
+        
+        async function disconnectClient() {
+            try {
+                const response = await fetch('/disconnect_client', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    clientConnected = false;
+                    showStatus(result.message, 'success');
+                    addMessage({
+                        type: 'system',
+                        content: '已断开服务器连接',
+                        timestamp: new Date().toLocaleString()
+                    });
+                    clearInterval(messagePollInterval);
+                } else {
+                    showStatus(result.message, 'error');
+                }
+                
+                updateUI();
+            } catch (error) {
+                showStatus('断开连接失败: ' + error.message, 'error');
+            }
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            
+            if (!content) return;
+            
+            try {
+                const response = await fetch('/send_message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ content: content })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    input.value = '';
+                } else {
+                    showStatus(result.message, 'error');
+                }
+            } catch (error) {
+                showStatus('发送消息失败: ' + error.message, 'error');
+            }
+        }
+        
+        updateUI();
+    </script>
+</body>
+</html>
+    

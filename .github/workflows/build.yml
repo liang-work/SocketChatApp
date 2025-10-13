@@ -1,0 +1,246 @@
+name: Multi-Platform Build
+
+on:
+  workflow_dispatch:  # 手动触发
+    inputs:
+      version:
+        description: '版本号 (例如: v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+      build_all:
+        description: '构建所有平台'
+        type: boolean
+        required: true
+        default: true
+      build_linux_x64:
+        description: '构建Linux x64'
+        type: boolean
+        required: false
+        default: true
+      build_linux_arm64:
+        description: '构建Linux ARM64'
+        type: boolean
+        required: false
+        default: true
+      build_windows_x64:
+        description: '构建Windows x64'
+        type: boolean
+        required: false
+        default: true
+      build_android:
+        description: '构建Android APK'
+        type: boolean
+        required: false
+        default: true
+
+env:
+  PROJECT_NAME: "SocketChatApp"
+  VERSION: ${{ github.event.inputs.version }}
+
+jobs:
+  build-linux-x64:
+    if: ${{ github.event.inputs.build_all || github.event.inputs.build_linux_x64 }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, 3.10]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+    
+    - name: Build Linux x64 executable
+      run: |
+        pyinstaller --onefile --name "$PROJECT_NAME-linux-x64-$VERSION" \
+          --add-data "templates;templates" \
+          --hidden-import=queue \
+          --hidden-import=flask \
+          --hidden-import=webview \
+          main.py
+    
+    - name: Upload Linux x64 artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-x64-${{ matrix.python-version }}
+        path: dist/$PROJECT_NAME-linux-x64-$VERSION
+        retention-days: 30
+
+  build-linux-arm64:
+    if: ${{ github.event.inputs.build_all || github.event.inputs.build_linux_arm64 }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, 3.10]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up QEMU for ARM64
+      uses: docker/setup-qemu-action@v3
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+    
+    - name: Build Linux ARM64 executable
+      run: |
+        pyinstaller --onefile --name "$PROJECT_NAME-linux-arm64-$VERSION" \
+          --add-data "templates;templates" \
+          --hidden-import=queue \
+          --hidden-import=flask \
+          --hidden-import=webview \
+          main.py
+    
+    - name: Upload Linux ARM64 artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-arm64-${{ matrix.python-version }}
+        path: dist/$PROJECT_NAME-linux-arm64-$VERSION
+        retention-days: 30
+
+  build-windows-x64:
+    if: ${{ github.event.inputs.build_all || github.event.inputs.build_windows_x64 }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, 3.10]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+    
+    - name: Build Windows x64 executable
+      run: |
+        pyinstaller --onefile --name "$PROJECT_NAME-windows-x64-$VERSION.exe" `
+          --add-data "templates;templates" `
+          --hidden-import=queue `
+          --hidden-import=flask `
+          --hidden-import=webview `
+          main.py
+    
+    - name: Upload Windows x64 artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-x64-${{ matrix.python-version }}
+        path: dist/$PROJECT_NAME-windows-x64-$VERSION.exe
+        retention-days: 30
+
+  build-android-apk:
+    if: ${{ github.event.inputs.build_all || github.event.inputs.build_android }}
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install buildozer kivy
+    
+    - name: Create buildozer.spec for Android
+      run: |
+        cat > buildozer.spec << EOF
+        [app]
+        title = SocketChatApp
+        package.name = socketchatapp
+        package.domain = org.socketchat
+        
+        source.dir = .
+        source.include_exts = py,png,jpg,kv,atlas,txt,json,html,css
+        
+        version = 0.1
+        requirements = python3,flask,pywebview
+        
+        [buildozer]
+        log_level = 2
+        warn_on_root = yes
+        
+        [android]
+        api = 33
+        minapi = 21
+        
+        [android:app]
+        orientation = portrait
+        EOF
+    
+    - name: Build Android APK
+      run: |
+        buildozer android debug
+        ls -la bin/
+    
+    - name: Upload Android APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk
+        path: bin/*.apk
+        retention-days: 30
+
+  create-release:
+    needs: [build-linux-x64, build-linux-arm64, build-windows-x64, build-android-apk]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+    
+    - name: List downloaded artifacts
+      run: ls -R
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      if: success()
+      with:
+        tag_name: ${{ env.VERSION }}
+        release_name: "Release ${{ env.VERSION }}"
+        body: |
+          Multi-platform build of $PROJECT_NAME
+          
+          Built artifacts include:
+          - Linux x64 executables
+          - Linux ARM64 executables  
+          - Windows x64 executables
+          - Android APK
+        draft: false
+        prerelease: false
+        files: |
+          **/*
