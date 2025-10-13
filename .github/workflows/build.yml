@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.9, 3.10]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]  # 修复：使用字符串格式，添加支持的版本
     
     steps:
     - name: Checkout code
@@ -62,8 +62,8 @@ jobs:
     
     - name: Build Linux x64 executable
       run: |
-        pyinstaller --onefile --name "$PROJECT_NAME-linux-x64-$VERSION" \
-          --add-data "templates;templates" \
+        pyinstaller --onefile --name "${PROJECT_NAME}-linux-x64-${VERSION}" \
+          --add-data "templates:templates" \
           --hidden-import=queue \
           --hidden-import=flask \
           --hidden-import=webview \
@@ -73,7 +73,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: linux-x64-${{ matrix.python-version }}
-        path: dist/$PROJECT_NAME-linux-x64-$VERSION
+        path: dist/${PROJECT_NAME}-linux-x64-${VERSION}
         retention-days: 30
 
   build-linux-arm64:
@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.9, 3.10]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]  # 修复：使用字符串格式，添加支持的版本
     
     steps:
     - name: Checkout code
@@ -103,8 +103,8 @@ jobs:
     
     - name: Build Linux ARM64 executable
       run: |
-        pyinstaller --onefile --name "$PROJECT_NAME-linux-arm64-$VERSION" \
-          --add-data "templates;templates" \
+        pyinstaller --onefile --name "${PROJECT_NAME}-linux-arm64-${VERSION}" \
+          --add-data "templates:templates" \
           --hidden-import=queue \
           --hidden-import=flask \
           --hidden-import=webview \
@@ -114,7 +114,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: linux-arm64-${{ matrix.python-version }}
-        path: dist/$PROJECT_NAME-linux-arm64-$VERSION
+        path: dist/${PROJECT_NAME}-linux-arm64-${VERSION}
         retention-days: 30
 
   build-windows-x64:
@@ -122,7 +122,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.9, 3.10]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]  # 修复：使用字符串格式，添加支持的版本
     
     steps:
     - name: Checkout code
@@ -141,7 +141,7 @@ jobs:
     
     - name: Build Windows x64 executable
       run: |
-        pyinstaller --onefile --name "$PROJECT_NAME-windows-x64-$VERSION.exe" `
+        pyinstaller --onefile --name "$env:PROJECT_NAME-windows-x64-$env:VERSION.exe" `
           --add-data "templates;templates" `
           --hidden-import=queue `
           --hidden-import=flask `
@@ -152,7 +152,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: windows-x64-${{ matrix.python-version }}
-        path: dist/$PROJECT_NAME-windows-x64-$VERSION.exe
+        path: dist/${{ env.PROJECT_NAME }}-windows-x64-${{ env.VERSION }}.exe
         retention-days: 30
 
   build-android-apk:
@@ -174,38 +174,62 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install buildozer kivy
+        pip install buildozer kivy cython  # 修复：添加cython依赖
     
-    - name: Create buildozer.spec for Android
+    - name: Use existing buildozer.spec
       run: |
-        cat > buildozer.spec << EOF
-        [app]
-        title = SocketChatApp
-        package.name = socketchatapp
-        package.domain = org.socketchat
-        
-        source.dir = .
-        source.include_exts = py,png,jpg,kv,atlas,txt,json,html,css
-        
-        version = 0.1
-        requirements = python3,flask,pywebview
-        
-        [buildozer]
-        log_level = 2
-        warn_on_root = yes
-        
-        [android]
-        api = 33
-        minapi = 21
-        
-        [android:app]
-        orientation = portrait
-        EOF
+        # 使用项目中的buildozer.spec文件，而不是重新创建
+        if [ -f buildozer.spec ]; then
+          echo "使用现有的buildozer.spec文件"
+          cat buildozer.spec
+        else
+          echo "创建默认的buildozer.spec文件"
+          cat > buildozer.spec << EOF
+[app]
+title = SocketChatApp
+package.name = socketchatapp
+package.domain = org.socketchat
+
+source.dir = .
+source.include_exts = py,png,jpg,kv,atlas,txt,json,html,css
+
+version = 1.0.0
+requirements = python3,flask,pywebview
+
+[buildozer]
+log_level = 2
+warn_on_root = yes
+
+[android]
+api = 33
+minapi = 21
+ndk = 23b
+
+[android:app]
+orientation = portrait
+
+[android:permission.INTERNET]
+[android:permission.WRITE_EXTERNAL_STORAGE]
+EOF
+        fi
     
     - name: Build Android APK
       run: |
+        # 设置环境变量避免交互式提示
+        export BUILD_PATH=$PWD/.buildozer
+        export CACHE_PATH=$HOME/.buildozer
+        
+        # 构建Android APK
         buildozer android debug
-        ls -la bin/
+        
+        # 检查构建结果
+        if [ -d bin ]; then
+          echo "构建成功，APK文件列表："
+          ls -la bin/
+        else
+          echo "构建失败，检查错误日志"
+          exit 1
+        fi
     
     - name: Upload Android APK artifact
       uses: actions/upload-artifact@v4
