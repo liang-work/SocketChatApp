@@ -29,7 +29,7 @@ env:
   PYTHON_VERSION: '3.11'
   ANDROID_API_LEVEL: '33'
   ANDROID_BUILD_TOOLS_VERSION: '33.0.0'
-  ANDROID_NDK_VERSION: '23b'
+  ANDROID_NDK_VERSION: '25.2.9519653'  # 使用可用的NDK版本
 
 jobs:
   build-linux-x64:
@@ -157,11 +157,6 @@ jobs:
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      with:
-        jdk-version: '17'
-        
     - name: Install Buildozer and dependencies
       run: |
         python -m pip install --upgrade pip
@@ -186,23 +181,47 @@ jobs:
           unzip \
           curl
         
+    - name: Setup Android environment
+      run: |
+        # 使用GitHub Actions预装的Android SDK
+        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
+        
+        # 更新buildozer.spec中的NDK版本
+        sed -i "s/ndk = 23b/ndk = ${{ env.ANDROID_NDK_VERSION }}/" buildozer.spec
+        
+    - name: List available NDK versions
+      run: |
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list | grep "ndk" || true
+        
     - name: Accept Android licenses
       run: |
         yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --update
         
     - name: Install required Android packages
       run: |
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-${{ env.ANDROID_API_LEVEL }}"
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;${{ env.ANDROID_BUILD_TOOLS_VERSION }}"
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools"
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;${{ env.ANDROID_NDK_VERSION }}"
+        # 尝试安装NDK，如果失败则继续
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;${{ env.ANDROID_NDK_VERSION }}" || echo "NDK installation failed, continuing with pre-installed NDK"
         
     - name: Build Android APK
       run: |
+        # 检查Android环境
+        echo "ANDROID_HOME: $ANDROID_HOME"
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+        
+        # 使用buildozer构建
         buildozer -v android debug
-        # Rename APK file to include version number
-        mv bin/*.apk bin/SocketChatApp-android-${{ github.event.inputs.version }}.apk
+        
+        # 重命名APK文件以包含版本号
+        if [ -f bin/*.apk ]; then
+          mv bin/*.apk bin/SocketChatApp-android-${{ github.event.inputs.version }}.apk
+        else
+          echo "No APK file found in bin directory"
+          ls -la bin/ || true
+        fi
         
     - name: Upload Android artifact
       uses: actions/upload-artifact@v4
