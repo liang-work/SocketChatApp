@@ -146,26 +146,29 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         
-    - name: Set up JDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '11'
-        
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
-      
-    - name: Install Buildozer
+      with:
+        jdk-version: '17'
+        
+    - name: Install Buildozer and dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install -r requirements.txt
         pip install buildozer
         
-    - name: Install Android dependencies
+    - name: Install Android build dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -179,7 +182,21 @@ jobs:
           zlib1g-dev \
           libncurses5-dev \
           libtinfo5 \
-          cmake
+          cmake \
+          unzip \
+          curl
+        
+    - name: Accept Android licenses
+      run: |
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --update
+        
+    - name: Install required Android packages
+      run: |
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-${{ env.ANDROID_API_LEVEL }}"
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;${{ env.ANDROID_BUILD_TOOLS_VERSION }}"
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools"
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;${{ env.ANDROID_NDK_VERSION }}"
         
     - name: Build Android APK
       run: |
