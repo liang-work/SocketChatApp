@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-多平台构建脚本
-用于本地测试构建过程
+Multi-platform build script
+For local testing of build process
 """
 
 import os
@@ -12,23 +12,23 @@ import argparse
 from pathlib import Path
 
 def run_command(cmd, cwd=None):
-    """运行命令并返回结果"""
+    """Run command and return result"""
     try:
-        result = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True)
+        result = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True, encoding='utf-8')
         if result.returncode != 0:
-            print(f"命令执行失败: {cmd}")
-            print(f"错误输出: {result.stderr}")
+            print(f"Command failed: {cmd}")
+            print(f"Error output: {result.stderr}")
             return False
-        print(f"命令执行成功: {cmd}")
-        print(f"输出: {result.stdout}")
+        print(f"Command successful: {cmd}")
+        print(f"Output: {result.stdout}")
         return True
     except Exception as e:
-        print(f"执行命令时发生错误: {e}")
+        print(f"Error executing command: {e}")
         return False
 
 def build_linux_x64(version):
-    """构建Linux x64版本"""
-    print("开始构建Linux x64版本...")
+    """Build Linux x64 version"""
+    print("Building Linux x64 version...")
     
     cmd = f'pyinstaller --onefile --name "SocketChatApp-linux-x64-{version}" ' \
           f'--add-data "templates:templates" ' \
@@ -40,10 +40,10 @@ def build_linux_x64(version):
     return run_command(cmd)
 
 def build_linux_arm64(version):
-    """构建Linux ARM64版本"""
-    print("开始构建Linux ARM64版本...")
+    """Build Linux ARM64 version"""
+    print("Building Linux ARM64 version...")
     
-    # 在GitHub Actions中，我们使用相同的构建命令，但重命名输出文件
+    # In GitHub Actions, we use the same build command but rename the output file
     cmd = f'pyinstaller --onefile --name "SocketChatApp-linux-arm64-{version}" ' \
           f'--add-data "templates:templates" ' \
           f'--hidden-import=queue ' \
@@ -54,11 +54,11 @@ def build_linux_arm64(version):
     return run_command(cmd)
 
 def build_windows_x64(version):
-    """构建Windows x64版本"""
-    print("开始构建Windows x64版本...")
+    """Build Windows x64 version"""
+    print("Building Windows x64 version...")
     
     if platform.system() != "Windows":
-        print("警告: 非Windows系统构建Windows版本可能不完整")
+        print("Warning: Building Windows version on non-Windows system may be incomplete")
     
     cmd = f'pyinstaller --onefile --name "SocketChatApp-windows-x64-{version}.exe" ' \
           f'--add-data "templates;templates" ' \
@@ -70,8 +70,8 @@ def build_windows_x64(version):
     return run_command(cmd)
 
 def install_dependencies():
-    """安装构建依赖"""
-    print("安装构建依赖...")
+    """Install build dependencies"""
+    print("Installing build dependencies...")
     
     dependencies = [
         "pip install -r requirements.txt",
@@ -85,22 +85,22 @@ def install_dependencies():
     return True
 
 def main():
-    parser = argparse.ArgumentParser(description='多平台构建脚本')
-    parser.add_argument('--version', required=True, help='版本号 (例如: v1.0.0)')
+    parser = argparse.ArgumentParser(description='Multi-platform build script')
+    parser.add_argument('--version', required=True, help='Version number (e.g., v1.0.0)')
     parser.add_argument('--platform', choices=['linux-x64', 'linux-arm64', 'windows-x64', 'all'], 
-                       default='all', help='构建平台')
+                       default='all', help='Build platform')
     
     args = parser.parse_args()
     
-    print(f"开始构建版本: {args.version}")
-    print(f"目标平台: {args.platform}")
+    print(f"Starting build for version: {args.version}")
+    print(f"Target platform: {args.platform}")
     
-    # 安装依赖
+    # Install dependencies
     if not install_dependencies():
-        print("依赖安装失败")
+        print("Dependency installation failed")
         return 1
     
-    # 根据平台构建
+    # Build based on platform
     success = True
     
     if args.platform in ['linux-x64', 'all']:
@@ -116,10 +116,10 @@ def main():
             success = False
     
     if success:
-        print("构建完成!")
-        print("生成的文件在 dist/ 目录中")
+        print("Build completed!")
+        print("Generated files are in dist/ directory")
     else:
-        print("构建过程中出现错误")
+        print("Errors occurred during build process")
         return 1
     
     return 0
