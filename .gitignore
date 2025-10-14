@@ -30,7 +30,7 @@ MANIFEST
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
-*.spec
+# *.spec  # 注释掉这一行，允许buildozer.spec文件被提交
 
 # Installer logs
 pip-log.txt

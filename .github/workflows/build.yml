@@ -213,17 +213,37 @@ jobs:
         
     - name: Install required Android packages
       run: |
+        # 安装Android平台和工具
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-${{ env.ANDROID_API_LEVEL }}"
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;${{ env.ANDROID_BUILD_TOOLS_VERSION }}"
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools"
+        
+        # 安装命令行工具（包含Aidl）
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "cmdline-tools;latest"
+        
         # 尝试安装NDK，如果失败则继续
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;${{ env.ANDROID_NDK_VERSION }}" || echo "NDK installation failed, continuing with pre-installed NDK"
+        
+        # 验证Aidl工具是否可用
+        echo "Checking for Aidl tool..."
+        if [ -f $ANDROID_HOME/build-tools/${{ env.ANDROID_BUILD_TOOLS_VERSION }}/aidl ]; then
+          echo "Aidl tool found at: $ANDROID_HOME/build-tools/${{ env.ANDROID_BUILD_TOOLS_VERSION }}/aidl"
+        else
+          echo "Aidl tool not found, listing build-tools directory:"
+          ls -la $ANDROID_HOME/build-tools/ || true
+        fi
         
     - name: Build Android APK
       run: |
         # 检查Android环境
         echo "ANDROID_HOME: $ANDROID_HOME"
         echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+        
+        # 设置环境变量确保Aidl工具可访问
+        export PATH=$ANDROID_HOME/build-tools/${{ env.ANDROID_BUILD_TOOLS_VERSION }}:$PATH
+        
+        # 验证Aidl工具
+        which aidl || echo "Aidl not found in PATH"
         
         # 使用buildozer构建
         buildozer -v android debug
