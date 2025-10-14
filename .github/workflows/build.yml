@@ -209,6 +209,17 @@ jobs:
         
     - name: Accept Android licenses
       run: |
+        # 确保所有Android许可证都被接受
+        mkdir -p $ANDROID_HOME/licenses
+        echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license
+        echo -e "\nd56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_HOME/licenses/android-sdk-license
+        echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
+        echo -e "\n504667f4c0de7af1a06de9f4b1727b84351f2910" > $ANDROID_HOME/licenses/android-googletv-license
+        echo -e "\n601085b94cd77f0b54ff86406957099ebe79c4d6" > $ANDROID_HOME/licenses/android-sdk-arm-dbt-license
+        echo -e "\n33b6a2b64607f11b759f320ef9dff4ae5c47d97a" > $ANDROID_HOME/licenses/google-gdk-license
+        echo -e "\ne9acab5b5fbb560a72cfaecce8946896ff6aab9d" > $ANDROID_HOME/licenses/mips-android-sysimage-license
+        
+        # 使用sdkmanager确认许可证
         yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
         
     - name: Install required Android packages
@@ -216,13 +227,13 @@ jobs:
         # 先安装命令行工具
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "cmdline-tools;latest"
         
-        # 安装Android平台和工具
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-${{ env.ANDROID_API_LEVEL }}"
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;${{ env.ANDROID_BUILD_TOOLS_VERSION }}"
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools"
+        # 安装Android平台和工具（使用--sdk_root参数确保正确路径）
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platforms;android-${{ env.ANDROID_API_LEVEL }}"
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "build-tools;${{ env.ANDROID_BUILD_TOOLS_VERSION }}"
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools"
         
         # 尝试安装NDK，如果失败则继续
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;${{ env.ANDROID_NDK_VERSION }}" || echo "NDK installation failed, continuing with pre-installed NDK"
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "ndk;${{ env.ANDROID_NDK_VERSION }}" || echo "NDK installation failed, continuing with pre-installed NDK"
         
         # 验证Aidl工具是否可用
         echo "Checking for Aidl tool..."
