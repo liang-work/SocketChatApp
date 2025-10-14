@@ -187,8 +187,21 @@ jobs:
         echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
         
+        # 检查当前目录和文件
+        pwd
+        ls -la
+        echo "Current directory content:"
+        ls -la
+        echo "buildozer.spec exists: $(if [ -f buildozer.spec ]; then echo 'YES'; else echo 'NO'; fi)"
+        
         # 更新buildozer.spec中的NDK版本
-        sed -i "s/ndk = 23b/ndk = ${{ env.ANDROID_NDK_VERSION }}/" buildozer.spec
+        if [ -f buildozer.spec ]; then
+          sed -i "s/ndk = 23b/ndk = ${{ env.ANDROID_NDK_VERSION }}/" buildozer.spec
+          echo "Updated buildozer.spec with NDK version ${{ env.ANDROID_NDK_VERSION }}"
+        else
+          echo "ERROR: buildozer.spec not found!"
+          exit 1
+        fi
         
     - name: List available NDK versions
       run: |
