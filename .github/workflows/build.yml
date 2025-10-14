@@ -28,8 +28,8 @@ on:
 env:
   PYTHON_VERSION: '3.11'
   ANDROID_API_LEVEL: '33'
-  ANDROID_BUILD_TOOLS_VERSION: '33.0.3'  # 使用更稳定的版本
-  ANDROID_NDK_VERSION: '25.2.9519653'  # 使用可用的NDK版本
+  ANDROID_BUILD_TOOLS_VERSION: '33.0.3'
+  ANDROID_NDK_VERSION: '25.2.9519653'
 
 jobs:
   build-linux-x64:
@@ -161,7 +161,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install buildozer cython  # 添加Cython依赖
+        pip install buildozer cython
         
     - name: Install Android build dependencies
       run: |
@@ -180,16 +180,15 @@ jobs:
           cmake \
           unzip \
           curl
-        
+          
     - name: Setup Android environment
       run: |
         # 使用GitHub Actions预装的Android SDK
-        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-        echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
+        echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+        echo "PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/build-tools/${{ env.ANDROID_BUILD_TOOLS_VERSION }}:$ANDROID_HOME/platform-tools:$PATH" >> $GITHUB_ENV
         
         # 检查当前目录和文件
-        pwd
-        ls -la
         echo "Current directory content:"
         ls -la
         echo "buildozer.spec exists: $(if [ -f buildozer.spec ]; then echo 'YES'; else echo 'NO'; fi)"
@@ -202,10 +201,6 @@ jobs:
           echo "ERROR: buildozer.spec not found!"
           exit 1
         fi
-        
-    - name: List available NDK versions
-      run: |
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list | grep "ndk" || true
         
     - name: Accept Android licenses
       run: |
@@ -220,19 +215,16 @@ jobs:
         echo -e "\ne9acab5b5fbb560a72cfaecce8946896ff6aab9d" > $ANDROID_HOME/licenses/mips-android-sysimage-license
         
         # 使用sdkmanager确认许可证
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
         
     - name: Install required Android packages
       run: |
-        # 先安装命令行工具
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "cmdline-tools;latest"
-        
-        # 安装Android平台和工具（使用--sdk_root参数确保正确路径）
+        # 安装Android平台和工具
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platforms;android-${{ env.ANDROID_API_LEVEL }}"
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "build-tools;${{ env.ANDROID_BUILD_TOOLS_VERSION }}"
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools"
         
-        # 尝试安装NDK，如果失败则继续
+        # 安装NDK
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "ndk;${{ env.ANDROID_NDK_VERSION }}" || echo "NDK installation failed, continuing with pre-installed NDK"
         
         # 验证Aidl工具是否可用
@@ -242,6 +234,7 @@ jobs:
         else
           echo "Aidl tool not found, listing build-tools directory:"
           ls -la $ANDROID_HOME/build-tools/ || true
+          exit 1
         fi
         
     - name: Configure Buildozer for correct Build Tools
@@ -263,18 +256,14 @@ jobs:
         echo "ANDROID_HOME: $ANDROID_HOME"
         echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
         
-        # 设置环境变量确保Aidl工具可访问
-        export PATH=$ANDROID_HOME/build-tools/${{ env.ANDROID_BUILD_TOOLS_VERSION }}:$ANDROID_HOME/platform-tools:$PATH
-        
         # 验证Aidl工具
-        which aidl || echo "Aidl not found in PATH"
         echo "Aidl path: $(which aidl || echo 'Not found')"
         
         # 检查Build Tools目录
         echo "Build Tools directory:"
         ls -la $ANDROID_HOME/build-tools/ || true
         
-        # 使用buildozer构建，指定Build Tools版本
+        # 使用buildozer构建
         buildozer -v android debug
         
         # 重命名APK文件以包含版本号
@@ -283,6 +272,7 @@ jobs:
         else
           echo "No APK file found in bin directory"
           ls -la bin/ || true
+          exit 1
         fi
         
     - name: Upload Android artifact
