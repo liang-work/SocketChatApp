@@ -28,7 +28,7 @@ on:
 env:
   PYTHON_VERSION: '3.11'
   ANDROID_API_LEVEL: '33'
-  ANDROID_BUILD_TOOLS_VERSION: '33.0.0'
+  ANDROID_BUILD_TOOLS_VERSION: '33.0.3'  # 使用更稳定的版本
   ANDROID_NDK_VERSION: '25.2.9519653'  # 使用可用的NDK版本
 
 jobs:
@@ -209,17 +209,17 @@ jobs:
         
     - name: Accept Android licenses
       run: |
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
         
     - name: Install required Android packages
       run: |
+        # 先安装命令行工具
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "cmdline-tools;latest"
+        
         # 安装Android平台和工具
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-${{ env.ANDROID_API_LEVEL }}"
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;${{ env.ANDROID_BUILD_TOOLS_VERSION }}"
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools"
-        
-        # 安装命令行工具（包含Aidl）
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "cmdline-tools;latest"
         
         # 尝试安装NDK，如果失败则继续
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;${{ env.ANDROID_NDK_VERSION }}" || echo "NDK installation failed, continuing with pre-installed NDK"
@@ -233,6 +233,19 @@ jobs:
           ls -la $ANDROID_HOME/build-tools/ || true
         fi
         
+    - name: Configure Buildozer for correct Build Tools
+      run: |
+        # 创建buildozer配置文件，强制使用指定的Build Tools版本
+        mkdir -p ~/.buildozer
+        cat > ~/.buildozer/android.cfg << EOF
+        [app]
+        # 强制使用指定的Build Tools版本
+        android.build_tools_version = ${{ env.ANDROID_BUILD_TOOLS_VERSION }}
+        android.api = ${{ env.ANDROID_API_LEVEL }}
+        android.minapi = 21
+        android.ndk = ${{ env.ANDROID_NDK_VERSION }}
+        EOF
+        
     - name: Build Android APK
       run: |
         # 检查Android环境
@@ -240,12 +253,17 @@ jobs:
         echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
         
         # 设置环境变量确保Aidl工具可访问
-        export PATH=$ANDROID_HOME/build-tools/${{ env.ANDROID_BUILD_TOOLS_VERSION }}:$PATH
+        export PATH=$ANDROID_HOME/build-tools/${{ env.ANDROID_BUILD_TOOLS_VERSION }}:$ANDROID_HOME/platform-tools:$PATH
         
         # 验证Aidl工具
         which aidl || echo "Aidl not found in PATH"
+        echo "Aidl path: $(which aidl || echo 'Not found')"
         
-        # 使用buildozer构建
+        # 检查Build Tools目录
+        echo "Build Tools directory:"
+        ls -la $ANDROID_HOME/build-tools/ || true
+        
+        # 使用buildozer构建，指定Build Tools版本
         buildozer -v android debug
         
         # 重命名APK文件以包含版本号
