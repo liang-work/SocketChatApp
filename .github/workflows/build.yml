@@ -152,6 +152,13 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
         
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        ndk-version: ${{ env.ANDROID_NDK_VERSION }}
+        build-tools-version: ${{ env.ANDROID_BUILD_TOOLS_VERSION }}
+        platform: android-${{ env.ANDROID_API_LEVEL }}
+        
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -181,62 +188,6 @@ jobs:
           unzip \
           curl
           
-    - name: Setup Android environment
-      run: |
-        # 使用GitHub Actions预装的Android SDK
-        echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-        echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-        echo "PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/build-tools/${{ env.ANDROID_BUILD_TOOLS_VERSION }}:$ANDROID_HOME/platform-tools:$PATH" >> $GITHUB_ENV
-        
-        # 检查当前目录和文件
-        echo "Current directory content:"
-        ls -la
-        echo "buildozer.spec exists: $(if [ -f buildozer.spec ]; then echo 'YES'; else echo 'NO'; fi)"
-        
-        # 更新buildozer.spec中的NDK版本
-        if [ -f buildozer.spec ]; then
-          sed -i "s/ndk = 23b/ndk = ${{ env.ANDROID_NDK_VERSION }}/" buildozer.spec
-          echo "Updated buildozer.spec with NDK version ${{ env.ANDROID_NDK_VERSION }}"
-        else
-          echo "ERROR: buildozer.spec not found!"
-          exit 1
-        fi
-        
-    - name: Accept Android licenses
-      run: |
-        # 确保所有Android许可证都被接受
-        mkdir -p $ANDROID_HOME/licenses
-        echo -e "\n8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license
-        echo -e "\nd56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_HOME/licenses/android-sdk-license
-        echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
-        echo -e "\n504667f4c0de7af1a06de9f4b1727b84351f2910" > $ANDROID_HOME/licenses/android-googletv-license
-        echo -e "\n601085b94cd77f0b54ff86406957099ebe79c4d6" > $ANDROID_HOME/licenses/android-sdk-arm-dbt-license
-        echo -e "\n33b6a2b64607f11b759f320ef9dff4ae5c47d97a" > $ANDROID_HOME/licenses/google-gdk-license
-        echo -e "\ne9acab5b5fbb560a72cfaecce8946896ff6aab9d" > $ANDROID_HOME/licenses/mips-android-sysimage-license
-        
-        # 使用sdkmanager确认许可证
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-        
-    - name: Install required Android packages
-      run: |
-        # 安装Android平台和工具
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platforms;android-${{ env.ANDROID_API_LEVEL }}"
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "build-tools;${{ env.ANDROID_BUILD_TOOLS_VERSION }}"
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools"
-        
-        # 安装NDK
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "ndk;${{ env.ANDROID_NDK_VERSION }}" || echo "NDK installation failed, continuing with pre-installed NDK"
-        
-        # 验证Aidl工具是否可用
-        echo "Checking for Aidl tool..."
-        if [ -f $ANDROID_HOME/build-tools/${{ env.ANDROID_BUILD_TOOLS_VERSION }}/aidl ]; then
-          echo "Aidl tool found at: $ANDROID_HOME/build-tools/${{ env.ANDROID_BUILD_TOOLS_VERSION }}/aidl"
-        else
-          echo "Aidl tool not found, listing build-tools directory:"
-          ls -la $ANDROID_HOME/build-tools/ || true
-          exit 1
-        fi
-        
     - name: Configure Buildozer for correct Build Tools
       run: |
         # 创建buildozer配置文件，强制使用指定的Build Tools版本
