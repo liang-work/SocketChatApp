@@ -132,6 +132,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install buildozer
         pip install -r requirements.txt
+        pip install cython  # 添加Cython依赖
         sudo apt-get update
         sudo apt-get install -y git unzip openjdk-11-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev
 
