@@ -127,9 +127,9 @@ jobs:
     - name: Install Android SDK and tools
       run: |
         # 安装Android命令行工具到用户目录
-        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
         mkdir -p $HOME/android-sdk
-        unzip commandlinetools-linux-9477386_latest.zip -d $HOME/android-sdk/cmdline-tools
+        unzip -q commandlinetools-linux-9477386_latest.zip -d $HOME/android-sdk/cmdline-tools
         mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
         
         # 设置环境变量
@@ -139,11 +139,26 @@ jobs:
 
     - name: Accept Android licenses
       run: |
-        yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+        # 创建许可证接受文件
+        mkdir -p $HOME/.android
+        echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $HOME/.android/licenses/android-sdk-license
+        echo "d56f5187479451eabf01fb78af6dfcb131a6481" >> $HOME/.android/licenses/android-sdk-license
+        echo "84831b9409646a918e30573bab4c9c91346d8abd" > $HOME/.android/licenses/android-sdk-preview-license
+        echo "601085b94cd77f0b54ff86406957099ebe79c4d6" > $HOME/.android/licenses/intel-android-extra-license
 
     - name: Install Android SDK components
       run: |
-        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.0" "ndk;25.2.9519653"
+        # 安装必要的Android SDK组件
+        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --update
+        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.0" "ndk;25.2.9519653" --verbose
+
+    - name: Verify Android tools installation
+      run: |
+        # 验证工具安装
+        echo "检查aidl工具..."
+        $HOME/android-sdk/build-tools/33.0.0/aidl --version || echo "aidl工具未找到"
+        echo "检查adb工具..."
+        $HOME/android-sdk/platform-tools/adb version || echo "adb工具未找到"
 
     - name: Install Buildozer and dependencies
       run: |
