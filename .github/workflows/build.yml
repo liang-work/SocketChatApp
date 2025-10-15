@@ -177,6 +177,10 @@ jobs:
         mkdir -p $HOME/.buildozer/android/platform/android-sdk/licenses
         cp $HOME/.android/licenses/* $HOME/.buildozer/android/platform/android-sdk/licenses/
         
+        # 创建符号链接，让Buildozer使用我们安装的SDK工具
+        mkdir -p $HOME/.buildozer/android/platform/android-sdk
+        ln -sf $HOME/android-sdk $HOME/.buildozer/android/platform/android-sdk
+        
         # 设置环境变量让Buildozer使用我们的SDK
         echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
@@ -194,6 +198,9 @@ jobs:
     - name: Build Android APK
       run: |
         # 使用非交互模式构建，自动接受许可证
+        # 设置环境变量，确保Buildozer使用正确的SDK管理器
+        export ANDROID_HOME=$HOME/android-sdk
+        export ANDROID_SDK_ROOT=$HOME/android-sdk
         yes | buildozer -v android debug
 
     - name: Upload Android APK artifact
