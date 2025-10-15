@@ -173,13 +173,17 @@ jobs:
       run: |
         # 配置Buildozer使用我们安装的Android SDK
         mkdir -p $HOME/.buildozer/android/platform
+        
+        # 创建完整的SDK目录结构，包括tools/bin目录
+        mkdir -p $HOME/.buildozer/android/platform/android-sdk/tools/bin
+        
+        # 创建符号链接，让Buildozer使用我们安装的SDK管理器
+        ln -sf $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager $HOME/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
+        ln -sf $HOME/android-sdk/cmdline-tools/latest/bin/avdmanager $HOME/.buildozer/android/platform/android-sdk/tools/bin/avdmanager
+        
         # 复制许可证文件到Buildozer的SDK目录
         mkdir -p $HOME/.buildozer/android/platform/android-sdk/licenses
         cp $HOME/.android/licenses/* $HOME/.buildozer/android/platform/android-sdk/licenses/
-        
-        # 创建符号链接，让Buildozer使用我们安装的SDK工具
-        mkdir -p $HOME/.buildozer/android/platform/android-sdk
-        ln -sf $HOME/android-sdk $HOME/.buildozer/android/platform/android-sdk
         
         # 设置环境变量让Buildozer使用我们的SDK
         echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
@@ -201,7 +205,12 @@ jobs:
         # 设置环境变量，确保Buildozer使用正确的SDK管理器
         export ANDROID_HOME=$HOME/android-sdk
         export ANDROID_SDK_ROOT=$HOME/android-sdk
-        yes | buildozer -v android debug
+        
+        # 预安装必要的SDK组件，避免Buildozer尝试安装时失败
+        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.0" --verbose
+        
+        # 构建APK
+        buildozer -v android debug
 
     - name: Upload Android APK artifact
       uses: actions/upload-artifact@v4
