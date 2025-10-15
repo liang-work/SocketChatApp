@@ -4,21 +4,23 @@ on:
   workflow_dispatch:
     inputs:
       platforms:
-        description: '选择要构建的平台'
+        description: '选择要构建的平台（可多选）'
         type: choice
         options:
+        - all
         - linux-x64
         - linux-arm64
         - windows-x64
         - android
         required: true
         default: 'linux-x64'
+        multiple: true
 
 jobs:
   build-linux-x64:
     name: Build Linux x64
     runs-on: ubuntu-latest
-    if: contains(github.event.inputs.platforms, 'linux-x64')
+    if: ${{ contains(github.event.inputs.platforms, 'all') || contains(github.event.inputs.platforms, 'linux-x64') }}
     
     steps:
     - name: Checkout code
@@ -49,7 +51,7 @@ jobs:
   build-linux-arm64:
     name: Build Linux ARM64
     runs-on: ubuntu-latest
-    if: contains(github.event.inputs.platforms, 'linux-arm64')
+    if: ${{ contains(github.event.inputs.platforms, 'all') || contains(github.event.inputs.platforms, 'linux-arm64') }}
     
     steps:
     - name: Checkout code
@@ -80,7 +82,7 @@ jobs:
   build-windows-x64:
     name: Build Windows x64
     runs-on: windows-latest
-    if: contains(github.event.inputs.platforms, 'windows-x64')
+    if: ${{ contains(github.event.inputs.platforms, 'all') || contains(github.event.inputs.platforms, 'windows-x64') }}
     
     steps:
     - name: Checkout code
@@ -111,7 +113,7 @@ jobs:
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
-    if: contains(github.event.inputs.platforms, 'android')
+    if: ${{ contains(github.event.inputs.platforms, 'all') || contains(github.event.inputs.platforms, 'android') }}
     
     steps:
     - name: Checkout code
@@ -131,11 +133,17 @@ jobs:
         pip install buildozer
         pip install -r requirements.txt
         sudo apt-get update
-        sudo apt-get install -y git unzip openjdk-11-jdk
+        sudo apt-get install -y git unzip openjdk-11-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
 
-    - name: Initialize Buildozer
+    - name: Validate buildozer.spec
       run: |
-        buildozer init
+        echo "检查buildozer.spec文件..."
+        if [ -f buildozer.spec ]; then
+          echo "buildozer.spec文件存在，跳过初始化"
+        else
+          echo "buildozer.spec文件不存在，进行初始化"
+          buildozer init
+        fi
 
     - name: Build Android APK
       run: |
