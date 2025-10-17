@@ -174,18 +174,11 @@ jobs:
         # 配置Buildozer使用我们安装的Android SDK
         mkdir -p $HOME/.buildozer/android/platform
         
-        # 创建完整的SDK目录结构，包括tools/bin目录
-        mkdir -p $HOME/.buildozer/android/platform/android-sdk/tools/bin
+        # 完全替换Buildozer的SDK目录为我们手动安装的SDK
+        rm -rf $HOME/.buildozer/android/platform/android-sdk
+        ln -sf $HOME/android-sdk $HOME/.buildozer/android/platform/android-sdk
         
-        # 创建符号链接，让Buildozer使用我们安装的SDK管理器
-        ln -sf $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager $HOME/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
-        ln -sf $HOME/android-sdk/cmdline-tools/latest/bin/avdmanager $HOME/.buildozer/android/platform/android-sdk/tools/bin/avdmanager
-        
-        # 创建符号链接到已安装的build-tools，让Buildozer能找到aidl工具
-        mkdir -p $HOME/.buildozer/android/platform/android-sdk/build-tools
-        ln -sf $HOME/android-sdk/build-tools/33.0.0 $HOME/.buildozer/android/platform/android-sdk/build-tools/33.0.0
-        
-        # 复制许可证文件到Buildozer的SDK目录
+        # 确保许可证文件被正确复制
         mkdir -p $HOME/.buildozer/android/platform/android-sdk/licenses
         cp $HOME/.android/licenses/* $HOME/.buildozer/android/platform/android-sdk/licenses/
         
@@ -205,26 +198,50 @@ jobs:
 
     - name: Build Android APK
       run: |
-        # 使用非交互模式构建，自动接受许可证
         # 设置环境变量，确保Buildozer使用正确的SDK管理器
         export ANDROID_HOME=$HOME/android-sdk
         export ANDROID_SDK_ROOT=$HOME/android-sdk
-        
-        # 预安装必要的SDK组件，避免Buildozer尝试安装时失败
-        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.0" --verbose
         
         # 创建buildozer.spec文件配置，指定使用已安装的SDK版本
         if [ ! -f buildozer.spec ]; then
           buildozer init
         fi
         
-        # 修改buildozer.spec文件，指定使用已安装的SDK版本
-        sed -i 's/android.sdk = .*/android.sdk = 33/' buildozer.spec
-        sed -i 's/android.ndk = .*/android.ndk = 25.2.9519653/' buildozer.spec
-        sed -i 's/android.build_tools_version = .*/android.build_tools_version = 33.0.0/' buildozer.spec
+        # 修改buildozer.spec文件，禁用自动SDK下载
+        cat > buildozer.spec << 'EOF'
+[app]
+title = SocketChatApp
+package.name = socketchatapp
+package.domain = org.example
+
+source.dir = .
+source.include_exts = py,png,jpg,kv,atlas
+
+version = 0.1
+requirements = python3,kivy
+
+[buildozer]
+log_level = 2
+
+[app]
+android.permissions = INTERNET
+
+[android]
+# 使用已安装的SDK版本，禁用自动下载
+android.sdk_path = $HOME/android-sdk
+android.ndk_path = $HOME/android-sdk/ndk/25.2.9519653
+android.sdk = 33
+android.ndk = 25.2.9519653
+android.build_tools_version = 33.0.0
+android.api = 33
+
+# 禁用自动SDK下载
+android.skip_update = True
+android.accept_sdk_license = True
+EOF
         
-        # 构建APK
-        buildozer -v android debug
+        # 构建APK，使用非交互模式
+        buildozer -v android debug --sdk-dir $HOME/android-sdk
 
     - name: Upload Android APK artifact
       uses: actions/upload-artifact@v4
